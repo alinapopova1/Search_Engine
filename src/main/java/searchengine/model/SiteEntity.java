@@ -5,10 +5,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "site")
+@Table(name = "site", indexes = {@Index(columnList = "url", name = "url_index")})
 @NoArgsConstructor
 @Getter
 @Setter
@@ -18,16 +19,16 @@ public class SiteEntity {
     private int id;
 //    @Nonnull
     @Column(columnDefinition = "ENUM('INDEXING', 'INDEXED', 'FAILED')", nullable = false)
-    private StatusSite status;
+    private String status;
     @Column(name = "status_time", columnDefinition = "DATETIME", nullable = false)
 //    @Nonnull
-    private LocalDateTime statusTime;
-    @Column(name = "last_error", columnDefinition = "TEXT", nullable = true)
+    private Timestamp statusTime;
+    @Column(name = "last_error", columnDefinition = "TEXT")
     private String lastError;
 //    @Nonnull
     @Column(columnDefinition = "VARCHAR(255)", nullable = false)
     private String url;
 //    @Nonnull
-    @Column(columnDefinition = "VARCHAR(255)", nullable = false)
+    @Column(columnDefinition = "VARCHAR(255)", nullable = false )
     private String name;
 }

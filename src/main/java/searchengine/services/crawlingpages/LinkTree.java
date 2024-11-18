@@ -1,5 +1,7 @@
 package searchengine.services.crawlingpages;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class LinkTree {
@@ -23,4 +25,16 @@ public class LinkTree {
         return linkChildren;
     }
 
+    public List<String> getAllChildrenLink(){
+        List<String> result = new ArrayList<>();
+        this.recursiveCrawling(result);
+        return result;
+    }
+
+    private void recursiveCrawling(List<String> result){
+        for (LinkTree linkTree1: getLinkChildren()){
+            result.add(linkTree1.url);
+            linkTree1.recursiveCrawling(result);
+        }
+    }
 }

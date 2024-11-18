@@ -14,7 +14,7 @@ public class PageEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
     @JoinColumn(name = "site_id", nullable = false)
     private SiteEntity site;
     @Column(columnDefinition = "VARCHAR(255)", nullable = false)
