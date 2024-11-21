@@ -1,6 +1,7 @@
 package searchengine.services.crawlingpages;
 
 import lombok.extern.slf4j.Slf4j;
+import searchengine.config.ConnectionSettings;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repositories.PageRepositories;
@@ -23,13 +24,16 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
     private PageRepositories pageRepositories;
     private AtomicBoolean statusIndexingProcess;
 
-    public TreeRecursive(SiteEntity site, LinkTree linkTree, ConcurrentHashMap<String, String> visitedPages, SiteRepositories siteRepositories, PageRepositories pageRepositories, AtomicBoolean statusIndexingProcess) {
+    private final ConnectionSettings connectionSettings;
+
+    public TreeRecursive(SiteEntity site, LinkTree linkTree, ConcurrentHashMap<String, String> visitedPages, SiteRepositories siteRepositories, PageRepositories pageRepositories, AtomicBoolean statusIndexingProcess, ConnectionSettings connectionSettings) {
         this.site = site;
         this.linkTree = linkTree;
         this.visitedPages = visitedPages;
         this.siteRepositories = siteRepositories;
         this.pageRepositories = pageRepositories;
         this.statusIndexingProcess = statusIndexingProcess;
+        this.connectionSettings = connectionSettings;
     }
 
     @Override
@@ -43,22 +47,28 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
             return linkTree;
         }
         PageEntity pageEntity = new PageEntity();
-        pageEntity.setPath(linkTree.getUrl().replace(site.getUrl(), ""));
+        pageEntity.setPath(linkTree.getUrl());
         pageEntity.setSite(site);
 
 //        visitLinks.add(linkTree.getUrl());
 
-        ConcurrentSkipListSet<String> links = Parsing.getLinks(linkTree.getUrl(), pageEntity);
+        ConcurrentSkipListSet<String> links = Parsing.getLinks(linkTree.getUrl(), pageEntity, connectionSettings);
 
         for (String link : links) {
-            if (!visitedPages.containsValue(link)) {
+//            if(link.contains(site.getUrl())) {
+                if (!visitedPages.containsValue(link)) {
 //                pageEntity.setSite(site);
 //                pageEntity.setPath(link);
 //                pageEntity.setCode();
 //                pageEntity.setContent();
-                visitedPages.put(linkTree.getUrl(), link);
-                linkTree.addLink(new LinkTree(link));
-            }
+                    visitedPages.put(linkTree.getUrl(), link);
+                    linkTree.addLink(new LinkTree(link));
+                }
+//            }
+        }
+
+        if (!statusIndexingProcess.get()){
+            throw new RuntimeException("Indexing stopped by user");
         }
 
         if (!pageEntity.getPath().equals(pageEntity.getSite().getUrl())){
@@ -69,7 +79,7 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
 
         List<TreeRecursive> newTask = new ArrayList<>();
         for (LinkTree l : linkTree.getLinkChildren()) {
-            TreeRecursive rec = new TreeRecursive(site, l, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess);
+            TreeRecursive rec = new TreeRecursive(site, l, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings);
             rec.fork();
             newTask.add(rec);
         }

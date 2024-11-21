@@ -3,6 +3,7 @@ package searchengine.services;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import searchengine.config.ConnectionSettings;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.indexing.IndexingResponse;
@@ -24,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class IndexingServiceImpl implements IndexingService {
     private final SitesList sitesList;
+    private final ConnectionSettings connectionSettings;
     //    private final StoragePage storagePage;
 //    private final StorageSite storageSite;
     private final PageRepositories pageRepositories;
@@ -35,7 +37,7 @@ public class IndexingServiceImpl implements IndexingService {
         IndexingResponse response = new IndexingResponse();
         try {
             deleteAllRecord();
-            ForkJoinPoolCrawlingPages.crawlingPages(addNewSiteInDb(), siteRepositories, pageRepositories, statusIndexingProcess);
+            ForkJoinPoolCrawlingPages.crawlingPages(addNewSiteInDb(), siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings);
             response.setResult(statusIndexingProcess.get());
         } catch (Exception e) {
             response.setResult(false);
@@ -64,10 +66,10 @@ public class IndexingServiceImpl implements IndexingService {
         log.info("deleteAllRecord-> Delete all record via page and site");
         siteRepositories.findAll().forEach(siteEntity -> {
             if (sitesList.getSites().stream().map(Site::getUrl).toList().contains(siteEntity.getUrl())) {
-                PageEntity pageEntity = pageRepositories.findBySiteId(siteEntity.getId());
-                if (pageEntity != null) {
+                List<PageEntity> pageEntities = pageRepositories.findAllBySiteId(siteEntity.getId());
+                pageEntities.forEach(pageEntity -> {
                     pageRepositories.deleteById(pageEntity.getId());
-                }
+                });
                 siteRepositories.deleteById(siteEntity.getId());
             }
         });

@@ -4,6 +4,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import searchengine.config.ConnectionSettings;
 import searchengine.model.PageEntity;
 
 import java.io.IOException;
@@ -26,11 +27,12 @@ public class Parsing {
                 || link.contains(".sql");
     }
 
-    public static ConcurrentSkipListSet<String> getLinks(String url, PageEntity pageEntity) {
+    public static ConcurrentSkipListSet<String> getLinks(String url, PageEntity pageEntity, ConnectionSettings connectionSettings) {
         ConcurrentSkipListSet<String> links = new ConcurrentSkipListSet<>();
         try {
-            sleep(150);
-            Document document = Jsoup.connect(url).timeout(10000).get();
+            sleep(500);
+            Document document = Jsoup.connect(url).userAgent(connectionSettings.getUserAgent()).referrer(connectionSettings.getReferer())
+                    .timeout(10000).get();
             Elements elements = document.select("body").select("a");
 
             for (Element element : elements) {

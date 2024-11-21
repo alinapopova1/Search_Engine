@@ -1,6 +1,7 @@
 package searchengine.services.crawlingpages;
 
 import lombok.extern.slf4j.Slf4j;
+import searchengine.config.ConnectionSettings;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.PageEntity;
@@ -22,7 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class ForkJoinPoolCrawlingPages {
 
-    public static void crawlingPages(List<SiteEntity> sitesList, SiteRepositories siteRepositories, PageRepositories pageRepositories, AtomicBoolean statusIndexingProcess) throws InterruptedException {
+    public static void crawlingPages(List<SiteEntity> sitesList, SiteRepositories siteRepositories, PageRepositories pageRepositories, AtomicBoolean statusIndexingProcess, ConnectionSettings connectionSettings) throws InterruptedException {
         log.info("crawlingPages-> Start method crawling pages");
         List<Thread> indexingThreadUrlList = new ArrayList<>();
         for (SiteEntity site: sitesList){
@@ -31,7 +32,7 @@ public class ForkJoinPoolCrawlingPages {
                 LinkTree linkTree = new LinkTree(site.getUrl());
                 try {
                     log.info("crawlingPages-> Start process crawling pages");
-                    new ForkJoinPool().invoke(new TreeRecursive(site, linkTree, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess));
+                    new ForkJoinPool().invoke(new TreeRecursive(site, linkTree, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings));
                 } catch (Exception e){
                     log.warn("crawlingPages-> Exception " + e);
                     site.setStatus(StatusSite.FAILED.name());

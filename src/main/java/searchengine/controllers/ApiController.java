@@ -54,11 +54,21 @@ public class ApiController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-//
-//    @PostMapping("/stopIndexing")
-//    public ResponseEntity<Indexing> stopIndexing() {
-//        return ResponseEntity.ok(statisticsService.getStatistics());
-//    }
+
+    @GetMapping("/stopIndexing")
+    public ResponseEntity<IndexingResponse> stopIndexing() {
+        if (!statusIndexingProcess.get()){
+            IndexingResponse indexingResponse = new IndexingResponse();
+            indexingResponse.setResult(false);
+            indexingResponse.setError("Индексация не запущена");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(indexingResponse);
+        } else {
+            statusIndexingProcess.set(false);
+            IndexingResponse indexingResponse = new IndexingResponse();
+            indexingResponse.setResult(false);
+            return ResponseEntity.ok(indexingResponse);
+        }
+    }
 //
 //    @GetMapping("/search")
 //    public ResponseEntity<Indexing> search() {
