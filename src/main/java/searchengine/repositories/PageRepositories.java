@@ -13,4 +13,7 @@ public interface PageRepositories extends JpaRepository<PageEntity, Integer> {
 
     @Query(value = "select * from page where site_id = :site_id", nativeQuery = true)
     List<PageEntity> findAllBySiteId(@Param("site_id") int siteId);
+
+    @Query(value = "select * from page where site_id = :site_id and path = :path limit 1", nativeQuery = true)
+    PageEntity findBySiteIdAndPage(@Param("site_id") int siteId, @Param("path") String path);
 }

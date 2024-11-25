@@ -2,14 +2,17 @@ package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 import searchengine.config.ConnectionSettings;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.indexing.IndexingResponse;
-import searchengine.model.PageEntity;
-import searchengine.model.SiteEntity;
-import searchengine.model.StatusSite;
+import searchengine.model.*;
+import searchengine.repositories.IndexRepositories;
+import searchengine.repositories.LemmaRepositories;
 import searchengine.repositories.PageRepositories;
 import searchengine.repositories.SiteRepositories;
 import searchengine.services.crawlingpages.ForkJoinPoolCrawlingPages;
@@ -30,6 +33,8 @@ public class IndexingServiceImpl implements IndexingService {
 //    private final StorageSite storageSite;
     private final PageRepositories pageRepositories;
     private final SiteRepositories siteRepositories;
+    private final LemmaRepositories lemmaRepositories;
+    private final IndexRepositories indexRepositories;
 
     @Override
     public IndexingResponse startIndexing(AtomicBoolean statusIndexingProcess) {
@@ -46,6 +51,31 @@ public class IndexingServiceImpl implements IndexingService {
 
 
         return response;
+    }
+
+    @Override
+    public IndexingResponse indexPage(String url) {
+        String host = url.substring(0, url.lastIndexOf(".ru")+3);
+        SiteEntity siteEntity = siteRepositories.findByUrl(host);
+        IndexingResponse indexingResponse = new IndexingResponse();
+        if (siteEntity == null){
+            indexingResponse.setResult(false);
+            indexingResponse.setError("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
+            return indexingResponse;
+        } else if (!siteEntity.getStatus().equals(StatusSite.INDEXED.name())){
+            indexingResponse.setResult(false);
+            indexingResponse.setError("Хост данной страницы в данный момент индексируется");
+            return indexingResponse;
+        }
+
+        deletePage(siteEntity.getId(), url);
+        PageEntity pageEntity = new PageEntity();
+        pageEntity.setPath(url);
+        pageEntity.setSite(siteEntity);
+//        LemmaFinder.lemmaFinder(url, connectionSettings, pageEntity);
+
+        indexingResponse.setResult(true);
+        return indexingResponse;
     }
 
     private List<SiteEntity> addNewSiteInDb() {
@@ -73,5 +103,14 @@ public class IndexingServiceImpl implements IndexingService {
                 siteRepositories.deleteById(siteEntity.getId());
             }
         });
+    }
+
+    private void deletePage(int siteId, String path){
+        PageEntity pageEntity = pageRepositories.findBySiteIdAndPage(siteId, path);
+        LemmaEntity lemmaEntity = lemmaRepositories.findBySiteId(siteId);
+        IndexEntity indexEntity = indexRepositories.findByPageIdLemmaId(pageEntity.getId(), lemmaEntity.getId());
+        indexRepositories.deleteById(indexEntity.getId());
+        lemmaRepositories.deleteById(lemmaEntity.getId());
+        pageRepositories.deleteById(pageEntity.getId());
     }
 }
