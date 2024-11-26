@@ -35,14 +35,15 @@ public class ForkJoinPoolCrawlingPages {
             Thread thread = new Thread(indexingSite);
             indexingThreadUrlList.add(thread);
             thread.start();
+            site.setStatus(StatusSite.INDEXED.name());
+            siteRepositories.save(site);
         }
         for (Thread thread: indexingThreadUrlList){
             thread.join();
         }
-        statusIndexingProcess.set(false);
     }
 
-    static void indexingSite(SiteRepositories siteRepositories, PageRepositories pageRepositories, AtomicBoolean statusIndexingProcess, ConnectionSettings connectionSettings, SiteEntity site, LemmaRepositories lemmaRepositories, IndexRepositories indexRepositories) {
+    public static void indexingSite(SiteRepositories siteRepositories, PageRepositories pageRepositories, AtomicBoolean statusIndexingProcess, ConnectionSettings connectionSettings, SiteEntity site, LemmaRepositories lemmaRepositories, IndexRepositories indexRepositories) {
         ConcurrentHashMap<String, String> visitedPages = new ConcurrentHashMap<>();
         LinkTree linkTree = new LinkTree(site.getUrl());
         try {
@@ -64,7 +65,7 @@ public class ForkJoinPoolCrawlingPages {
             siteRepositories.save(site);
         } else {
             log.info("crawlingPages-> Indexing successful site:" + site.getName());
-            site.setStatus(StatusSite.INDEXED.name());
+//            site.setStatus(StatusSite.INDEXED.name());
             site.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             siteRepositories.save(site);
 //                    List<PageEntity> pageEntities = new ArrayList<>();

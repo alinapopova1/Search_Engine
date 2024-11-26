@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "index")
+@Table(name = "index_page")
 @NoArgsConstructor
 @Getter
 @Setter
@@ -20,8 +20,6 @@ public class IndexEntity {
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
     @JoinColumn(name = "lemma_id", nullable = false)
     private LemmaEntity lemma;
-    @Column(columnDefinition = "VARCHAR(255)", nullable = false)
-    private String path;
-    @Column(nullable = false)
+    @Column(name = "lemma_rank", nullable = false)
     private float rank;
 }

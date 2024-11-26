@@ -35,43 +35,49 @@ public class IndexingServiceImpl implements IndexingService {
     private final SiteRepositories siteRepositories;
     private final LemmaRepositories lemmaRepositories;
     private final IndexRepositories indexRepositories;
+//    private AtomicBoolean statusIndexingProcess = new AtomicBoolean(false);
 
     @Override
     public IndexingResponse startIndexing(AtomicBoolean statusIndexingProcess) {
         log.info("startIndexing-> Start indexing process");
         IndexingResponse response = new IndexingResponse();
+//        this.statusIndexingProcess = statusIndexingProcess;
         try {
             deleteAllRecord();
-            ForkJoinPoolCrawlingPages.crawlingPages(addNewSiteInDb(), siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings);
+            ForkJoinPoolCrawlingPages.crawlingPages(addNewSiteInDb(), siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories);
             response.setResult(statusIndexingProcess.get());
         } catch (Exception e) {
             response.setResult(false);
             response.setError("Error: " + e);
         }
-
+//        this.statusIndexingProcess.set(false);
 
         return response;
     }
 
     @Override
     public IndexingResponse indexPage(String url) {
-        String host = url.substring(0, url.lastIndexOf(".ru")+3);
+        String host = url.substring(0, url.lastIndexOf(".ru") + 3);
+        if (!host.contains("www")) {
+            host = host.replace("https://", "https://www.");
+        }
         SiteEntity siteEntity = siteRepositories.findByUrl(host);
         IndexingResponse indexingResponse = new IndexingResponse();
-        if (siteEntity == null){
+        if (siteEntity == null) {
             indexingResponse.setResult(false);
             indexingResponse.setError("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
             return indexingResponse;
-        } else if (!siteEntity.getStatus().equals(StatusSite.INDEXED.name())){
+        } else if (siteEntity.getStatus().equals(StatusSite.INDEXED.name())) {
             indexingResponse.setResult(false);
             indexingResponse.setError("Хост данной страницы в данный момент индексируется");
             return indexingResponse;
         }
 
         deletePage(siteEntity.getId(), url);
-        PageEntity pageEntity = new PageEntity();
-        pageEntity.setPath(url);
-        pageEntity.setSite(siteEntity);
+//        PageEntity pageEntity = new PageEntity();
+//        pageEntity.setPath(url);
+//        pageEntity.setSite(siteEntity);
+        ForkJoinPoolCrawlingPages.indexingSite(siteRepositories, pageRepositories, new AtomicBoolean(true), connectionSettings, siteEntity, lemmaRepositories, indexRepositories);
 //        LemmaFinder.lemmaFinder(url, connectionSettings, pageEntity);
 
         indexingResponse.setResult(true);
@@ -105,12 +111,19 @@ public class IndexingServiceImpl implements IndexingService {
         });
     }
 
-    private void deletePage(int siteId, String path){
+    private void deletePage(int siteId, String path) {
         PageEntity pageEntity = pageRepositories.findBySiteIdAndPage(siteId, path);
-        LemmaEntity lemmaEntity = lemmaRepositories.findBySiteId(siteId);
-        IndexEntity indexEntity = indexRepositories.findByPageIdLemmaId(pageEntity.getId(), lemmaEntity.getId());
-        indexRepositories.deleteById(indexEntity.getId());
-        lemmaRepositories.deleteById(lemmaEntity.getId());
-        pageRepositories.deleteById(pageEntity.getId());
+        if (pageEntity != null) {
+            List<LemmaEntity> lemmaEntities = lemmaRepositories.findBySiteId(siteId);
+            for (LemmaEntity lemmaEntity : lemmaEntities) {
+                IndexEntity indexEntity = indexRepositories.findByPageIdLemmaId(pageEntity.getId(), lemmaEntity.getId());
+                if (indexEntity != null) {
+                    indexRepositories.deleteById(indexEntity.getId());
+                    lemmaEntity.setFrequency(lemmaEntity.getFrequency() - 1);
+                    lemmaRepositories.save(lemmaEntity);
+                }
+            }
+            pageRepositories.deleteById(pageEntity.getId());
+        }
     }
 }
