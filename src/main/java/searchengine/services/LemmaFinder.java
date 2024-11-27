@@ -2,6 +2,7 @@ package searchengine.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.morphology.LuceneMorphology;
+import org.apache.lucene.morphology.WrongCharaterException;
 import org.apache.lucene.morphology.english.EnglishLuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.Jsoup;
@@ -142,4 +143,26 @@ public class LemmaFinder {
 //
 //        return indexingResponse;
 //    }
+
+    public String getLemmaByWord(String word){
+        String wordLowerCase = word.toLowerCase();
+        if (checkMatchWord(wordLowerCase)) return "";
+        try {
+            List<String> normalWordForms = luceneMorphology.getNormalForms(wordLowerCase);
+            String wordInfo = luceneMorphology.getMorphInfo(wordLowerCase).toString();
+            if (checkWordInfo(wordInfo)) return "";
+            return normalWordForms.get(0);
+        } catch (WrongCharaterException ex) {
+            log.debug(ex.getMessage());
+        }
+        return "";
+    }
+
+    private boolean checkMatchWord(String word) {
+        return word.isEmpty() || String.valueOf(word.charAt(0)).matches("[a-zA-Z]") || String.valueOf(word.charAt(0)).matches("[0-9]");
+    }
+
+    private boolean checkWordInfo(String wordInfo) {
+        return wordInfo.contains("ПРЕДЛ") || wordInfo.contains("СОЮЗ") || wordInfo.contains("МЕЖД");
+    }
 }

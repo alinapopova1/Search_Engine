@@ -22,4 +22,8 @@ public class IndexEntity {
     private LemmaEntity lemma;
     @Column(name = "lemma_rank", nullable = false)
     private float rank;
+
+    public Integer getPageId(){
+        return page.getId();
+    }
 }
