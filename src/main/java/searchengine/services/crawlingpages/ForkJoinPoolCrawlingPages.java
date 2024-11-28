@@ -51,6 +51,7 @@ public class ForkJoinPoolCrawlingPages {
             new ForkJoinPool().invoke(new TreeRecursive(site, linkTree, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories));
         } catch (Exception e){
             log.warn("crawlingPages-> Exception " + e);
+            statusIndexingProcess.set(false);
             site.setStatus(StatusSite.FAILED.name());
             site.setLastError(e.getMessage());
             site.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
@@ -59,6 +60,7 @@ public class ForkJoinPoolCrawlingPages {
 
         if (!statusIndexingProcess.get()){
             log.warn("crawlingPages-> Indexing stopped by user, site:" + site.getName());
+            statusIndexingProcess.set(false);
             site.setStatus(StatusSite.FAILED.name());
             site.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             site.setLastError("Indexing stopped by user");

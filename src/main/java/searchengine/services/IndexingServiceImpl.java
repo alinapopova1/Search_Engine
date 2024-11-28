@@ -35,22 +35,23 @@ public class IndexingServiceImpl implements IndexingService {
     private final SiteRepositories siteRepositories;
     private final LemmaRepositories lemmaRepositories;
     private final IndexRepositories indexRepositories;
-//    private AtomicBoolean statusIndexingProcess = new AtomicBoolean(false);
+    private AtomicBoolean statusIndexingProcess;
 
     @Override
     public IndexingResponse startIndexing(AtomicBoolean statusIndexingProcess) {
         log.info("startIndexing-> Start indexing process");
+        this.statusIndexingProcess = statusIndexingProcess;
         IndexingResponse response = new IndexingResponse();
-//        this.statusIndexingProcess = statusIndexingProcess;
         try {
             deleteAllRecord();
-            ForkJoinPoolCrawlingPages.crawlingPages(addNewSiteInDb(), siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories);
-            response.setResult(statusIndexingProcess.get());
+            ForkJoinPoolCrawlingPages.crawlingPages(addNewSiteInDb(), siteRepositories, pageRepositories, this.statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories);
+            response.setResult(this.statusIndexingProcess.get());
         } catch (Exception e) {
-            response.setResult(false);
+            this.statusIndexingProcess.set(false);
+            statusIndexingProcess.set(false);
+            response.setResult(this.statusIndexingProcess.get());
             response.setError("Error: " + e);
         }
-//        this.statusIndexingProcess.set(false);
 
         return response;
     }
@@ -100,15 +101,24 @@ public class IndexingServiceImpl implements IndexingService {
 
     private void deleteAllRecord() {
         log.info("deleteAllRecord-> Delete all record via page and site");
-        siteRepositories.findAll().forEach(siteEntity -> {
-            if (sitesList.getSites().stream().map(Site::getUrl).toList().contains(siteEntity.getUrl())) {
-                List<PageEntity> pageEntities = pageRepositories.findAllBySiteId(siteEntity.getId());
-                pageEntities.forEach(pageEntity -> {
-                    pageRepositories.deleteById(pageEntity.getId());
-                });
-                siteRepositories.deleteById(siteEntity.getId());
+
+        List<SiteEntity> siteEntities = siteRepositories.findByUrls(sitesList.getUrls());
+        for (SiteEntity siteEntity : siteEntities) {
+            List<PageEntity> pageEntities = pageRepositories.findAllBySiteId(siteEntity.getId());
+            List<LemmaEntity> lemmaEntities = lemmaRepositories.findBySiteId(siteEntity.getId());
+            for (LemmaEntity lemmaEntity : lemmaEntities) {
+                List<IndexEntity> indexEntities = indexRepositories.findByLemmaId(lemmaEntity.getId());
+                for (IndexEntity indexEntity : indexEntities) {
+                    indexRepositories.deleteById(indexEntity.getId());
+                }
+                lemmaRepositories.deleteById(lemmaEntity.getId());
             }
-        });
+
+            for (PageEntity pageEntity : pageEntities) {
+                pageRepositories.deleteById(pageEntity.getId());
+            }
+            siteRepositories.deleteById(siteEntity.getId());
+        }
     }
 
     private void deletePage(int siteId, String path) {

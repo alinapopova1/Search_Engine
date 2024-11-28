@@ -23,4 +23,7 @@ public interface IndexRepositories extends JpaRepository<IndexEntity, Integer> {
     @Query(value = "select * from index_page where page_id in :page_ids", nativeQuery = true)
     List<IndexEntity> findByPageIds(@Param("page_ids") List<Integer> pageIds);
 
+    @Query(value = "delete from index_page where page_id = :page_id", nativeQuery = true)
+    void deleteByPageId(@Param("page_id") Integer pageId);
+
 }

@@ -1,6 +1,7 @@
 package searchengine.repositories;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import searchengine.model.LemmaEntity;
@@ -16,4 +17,8 @@ public interface LemmaRepositories extends JpaRepository<LemmaEntity, Integer> {
 
     @Query(value = "select * from lemma where site_id = :site_id and lemma = :lemma limit 1", nativeQuery = true)
     LemmaEntity findBySiteIdAndLemma(@Param("site_id") int siteId, @Param("lemma") String lemma);
+
+    @Modifying
+    @Query(value = "delete from lemma where site_id = :site_id", nativeQuery = true)
+   void deleteBySiteId(@Param("site_id") int siteId);
 }

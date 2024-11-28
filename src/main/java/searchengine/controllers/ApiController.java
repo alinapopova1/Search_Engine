@@ -10,6 +10,7 @@ import searchengine.services.IndexingService;
 import searchengine.services.SearchService;
 import searchengine.services.StatisticsService;
 
+import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -84,7 +85,7 @@ public class ApiController {
 
 
     @GetMapping("/search")
-    public ResponseEntity<SearchResponse> search(@RequestParam String query, @RequestParam(required = false) String site, @RequestParam(required = false, defaultValue = "0") int offset, @RequestParam(required = false, defaultValue = "20") int limit) {
+    public ResponseEntity<SearchResponse> search(@RequestParam String query, @RequestParam(required = false) String site, @RequestParam(required = false, defaultValue = "0") int offset, @RequestParam(required = false, defaultValue = "20") int limit) throws IOException {
         return ResponseEntity.ok(searchService.search(query, site, offset, limit));
     }
 }
