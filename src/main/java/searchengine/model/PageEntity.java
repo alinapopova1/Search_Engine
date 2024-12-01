@@ -17,7 +17,7 @@ public class PageEntity {
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
     @JoinColumn(name = "site_id", nullable = false)
     private SiteEntity site;
-    @Column(columnDefinition = "VARCHAR(255)", nullable = false)
+    @Column(columnDefinition = "VARCHAR(255)", nullable = false, unique = true)
     private String path;
 //    @Nonnull
     @Column(nullable = false)

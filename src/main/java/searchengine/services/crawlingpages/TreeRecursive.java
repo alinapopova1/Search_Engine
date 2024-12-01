@@ -1,6 +1,7 @@
 package searchengine.services.crawlingpages;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.ConnectionSettings;
 import searchengine.model.IndexEntity;
 import searchengine.model.LemmaEntity;
@@ -49,7 +50,9 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
     }
 
     @Override
+    @Transactional
     protected LinkTree compute() {
+
         log.info("TreeRecursive.compute -> start");
         if (!statusIndexingProcess.get()) {
             log.warn("TreeRecursive.compute -> Indexing stopped by user: " + linkTree.getUrl());
@@ -68,11 +71,7 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
 
         for (String link : links) {
 //            if(link.contains(site.getUrl())) {
-            if (!visitedPages.containsValue(link)) {
-//                pageEntity.setSite(site);
-//                pageEntity.setPath(link);
-//                pageEntity.setCode();
-//                pageEntity.setContent();
+            if (!visitedPages.containsValue(link) && !visitedPages.containsKey(link)) {
                 visitedPages.put(linkTree.getUrl(), link);
                 linkTree.addLink(new LinkTree(link));
             }
@@ -84,11 +83,12 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
         }
 
         if (!pageEntity.getPath().equals(pageEntity.getSite().getUrl())) {
-            pageEntity = pageRepositories.save(pageEntity);
             try {
+                pageEntity = pageRepositories.save(pageEntity);
                 saveLemmaAndIndexEntity(pageEntity);
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                log.error("Exception " +e);
+                e.printStackTrace();
             }
             site.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             siteRepositories.save(site);
@@ -96,9 +96,11 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
 
         List<TreeRecursive> newTask = new ArrayList<>();
         for (LinkTree l : linkTree.getLinkChildren()) {
-            TreeRecursive rec = new TreeRecursive(site, l, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories);
-            rec.fork();
-            newTask.add(rec);
+            if (!visitedPages.contains(l.getUrl()) && !visitedPages.containsKey(l.getUrl())) {
+                TreeRecursive rec = new TreeRecursive(site, l, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories);
+                rec.fork();
+                newTask.add(rec);
+            }
         }
         for (TreeRecursive task : newTask) {
             task.join();
@@ -111,13 +113,13 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
 //        LemmaFinder lemmaFinderEng = LemmaFinder.getEngInstance();
         if (pageEntity.getCode() == 200) {
             Map<String, Integer> lemmaCollect = lemmaFinderRus.collectLemmas(pageEntity.getContent());
-            Set<String> lemmas = lemmaFinderRus.getLemmaSet(pageEntity.getContent());
+            Set<String> lemmas = lemmaCollect.keySet();
 
             IndexEntity indexEntity = new IndexEntity();
 
             for (String lemma : lemmas) {
                 LemmaEntity lemmaEntity = lemmaRepositories.findBySiteIdAndLemma(pageEntity.getSite().getId(), lemma);
-                if (lemmaEntity==null) {
+                if (lemmaEntity == null) {
                     lemmaEntity = new LemmaEntity();
                     lemmaEntity.setFrequency(1);
                 } else {

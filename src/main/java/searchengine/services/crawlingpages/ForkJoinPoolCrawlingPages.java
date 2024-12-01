@@ -31,12 +31,13 @@ public class ForkJoinPoolCrawlingPages {
         for (SiteEntity site: sitesList){
             Runnable indexingSite = ()-> {
                 indexingSite(siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, site, lemmaRepositories, indexRepositories);
+                site.setStatus(StatusSite.INDEXED.name());
+                siteRepositories.save(site);
             };
             Thread thread = new Thread(indexingSite);
             indexingThreadUrlList.add(thread);
             thread.start();
-            site.setStatus(StatusSite.INDEXED.name());
-            siteRepositories.save(site);
+
         }
         for (Thread thread: indexingThreadUrlList){
             thread.join();
@@ -46,11 +47,14 @@ public class ForkJoinPoolCrawlingPages {
     public static void indexingSite(SiteRepositories siteRepositories, PageRepositories pageRepositories, AtomicBoolean statusIndexingProcess, ConnectionSettings connectionSettings, SiteEntity site, LemmaRepositories lemmaRepositories, IndexRepositories indexRepositories) {
         ConcurrentHashMap<String, String> visitedPages = new ConcurrentHashMap<>();
         LinkTree linkTree = new LinkTree(site.getUrl());
+//        LinkTreeNew linkTreeNew = new LinkTreeNew(site.getUrl());
         try {
             log.info("crawlingPages-> Start process crawling pages");
             new ForkJoinPool().invoke(new TreeRecursive(site, linkTree, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories));
+//            new ForkJoinPool().invoke(new TreeRecursiveNew(site, linkTreeNew, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories));
         } catch (Exception e){
             log.warn("crawlingPages-> Exception " + e);
+            e.printStackTrace();
             statusIndexingProcess.set(false);
             site.setStatus(StatusSite.FAILED.name());
             site.setLastError(e.getMessage());

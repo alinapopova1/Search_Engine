@@ -46,13 +46,13 @@ public class SearchServiceImpl implements SearchService {
         List<IndexEntity> indexEntities = new ArrayList<>();
         List<Integer> pageIdsToSave = new ArrayList<>();
         for (LemmaEntity lemmaEntity : sortedLemmas) {
-//            if (lemmaEntity == sortedLemmas.get(0)){
-//                indexEntities = indexRepositories.findByLemmaId(sortedLemmas.get(0).getId());
-//                pageIdsToSave.addAll(getPageIdsFromIndex(indexEntities));
-//            } else {
+            if (lemmaEntity == sortedLemmas.get(0)){
+                indexEntities = indexRepositories.findByLemmaId(sortedLemmas.get(0).getId());
+                pageIdsToSave.addAll(getPageIdsFromIndex(indexEntities));
+            } else {
             indexEntities = indexRepositories.findByPageIdsLemmaId(pageIdsToSave, lemmaEntity.getId());
             pageIdsToSave.addAll(getPageIdsFromIndex(indexEntities));
-//            }
+            }
 
             if (indexEntities.isEmpty() || pageIdsToSave.isEmpty()) {
                 break;
@@ -87,7 +87,7 @@ public class SearchServiceImpl implements SearchService {
         SearchData searchData = new SearchData();
         for (PageEntity pageEntity : relevantPages.keySet()) {
             Document document = Jsoup.parse(pageEntity.getContent());
-            searchData.setUri(pageEntity.getPath());
+
             SiteEntity searchSite = new SiteEntity();
             for (SiteEntity siteEntity : siteEntities) {
                 if (siteEntity.getId() == pageEntity.getSite().getId()) {
@@ -95,6 +95,7 @@ public class SearchServiceImpl implements SearchService {
                 }
             }
             for (StringBuilder snippet: getSnippets(document, lemmaFinder, sortedLemmas)){
+                searchData.setUri(pageEntity.getPath());
                 searchData.setSite(searchSite.getUrl());
                 searchData.setTitle(document.title());
                 searchData.setSiteName(searchSite.getName());

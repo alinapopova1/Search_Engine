@@ -1,13 +1,17 @@
 package searchengine.repositories;
 
+import lombok.Synchronized;
+import org.hibernate.annotations.Synchronize;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.model.IndexEntity;
 import searchengine.model.PageEntity;
 
 import java.util.List;
-
+@Transactional
 public interface PageRepositories extends JpaRepository<PageEntity, Integer> {
     @Query(value = "select * from page where site_id = :site_id limit 1", nativeQuery = true)
     PageEntity findBySiteId(@Param("site_id") int siteId);
