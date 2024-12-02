@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class TreeRecursive extends RecursiveTask<LinkTree> {
     private SiteEntity site;
     private LinkTree linkTree;
-    //    private static CopyOnWriteArrayList<String> visitLinks = new CopyOnWriteArrayList<>();
     private ConcurrentHashMap<String, String> visitedPages;
     private SiteRepositories siteRepositories;
     private PageRepositories pageRepositories;
@@ -62,45 +61,37 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
             return linkTree;
         }
         PageEntity pageEntity = new PageEntity();
-        pageEntity.setPath(linkTree.getUrl().substring(linkTree.getUrl().indexOf(".ru")+3));
+        pageEntity.setPath(linkTree.getUrl().substring(linkTree.getUrl().indexOf(".ru") + 3));
         pageEntity.setSite(site);
-
-//        visitLinks.add(linkTree.getUrl());
 
         ConcurrentSkipListSet<String> links = Parsing.getLinks(linkTree.getUrl(), pageEntity, connectionSettings);
 
         for (String link : links) {
-//            if(link.contains(site.getUrl())) {
             if (!visitedPages.containsValue(link) && !visitedPages.containsKey(link)) {
                 visitedPages.put(linkTree.getUrl(), link);
                 linkTree.addLink(new LinkTree(link));
             }
-//            }
         }
 
         if (!statusIndexingProcess.get()) {
             throw new RuntimeException("Indexing stopped by user");
         }
 
-//        if (!pageEntity.getPath().equals(pageEntity.getSite().getUrl())) {
-            try {
-                pageEntity = pageRepositories.save(pageEntity);
-                saveLemmaAndIndexEntity(pageEntity);
-            } catch (Exception e) {
-                log.error("Exception " +e);
-                e.printStackTrace();
-            }
-            site.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
-            siteRepositories.save(site);
-//        }
+        try {
+            pageEntity = pageRepositories.save(pageEntity);
+            saveLemmaAndIndexEntity(pageEntity);
+        } catch (Exception e) {
+            log.error("Exception " + e);
+            e.printStackTrace();
+        }
+        site.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+        siteRepositories.save(site);
 
         List<TreeRecursive> newTask = new ArrayList<>();
         for (LinkTree l : linkTree.getLinkChildren()) {
-//            if (!visitedPages.contains(l.getUrl()) && !visitedPages.containsKey(l.getUrl())) {
-                TreeRecursive rec = new TreeRecursive(site, l, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories);
-                rec.fork();
-                newTask.add(rec);
-//            }
+            TreeRecursive rec = new TreeRecursive(site, l, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories);
+            rec.fork();
+            newTask.add(rec);
         }
         for (TreeRecursive task : newTask) {
             task.join();
@@ -115,23 +106,30 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
             Map<String, Integer> lemmaCollect = lemmaFinderRus.collectLemmas(pageEntity.getContent());
             Set<String> lemmas = lemmaCollect.keySet();
 
-            IndexEntity indexEntity = new IndexEntity();
 
             for (String lemma : lemmas) {
                 LemmaEntity lemmaEntity = lemmaRepositories.findBySiteIdAndLemma(pageEntity.getSite().getId(), lemma);
                 if (lemmaEntity == null) {
                     lemmaEntity = new LemmaEntity();
                     lemmaEntity.setFrequency(1);
+                    lemmaEntity.setSite(pageEntity.getSite());
+                    lemmaEntity.setLemma(lemma);
                 } else {
                     lemmaEntity.setFrequency(lemmaEntity.getFrequency() + 1);
                 }
-                lemmaEntity.setSite(pageEntity.getSite());
-                lemmaEntity.setLemma(lemma);
-                lemmaRepositories.save(lemmaEntity);
-                indexEntity.setPage(pageEntity);
-                indexEntity.setLemma(lemmaEntity);
-                indexEntity.setRank(lemmaCollect.get(lemma));
-                indexRepositories.save(indexEntity);
+                lemmaEntity = lemmaRepositories.save(lemmaEntity);
+
+
+                IndexEntity indexEntity = indexRepositories.findByPageIdLemmaId(pageEntity.getSite().getId(), lemmaEntity.getId());
+                if(indexEntity == null){
+                    indexEntity = new IndexEntity();
+                    indexEntity.setPage(pageEntity);
+                    indexEntity.setLemma(lemmaEntity);
+                    indexEntity.setRank(lemmaCollect.get(lemma));
+                }else {
+                    indexEntity.setRank(indexEntity.getRank()+1);
+                }
+                indexEntity=indexRepositories.save(indexEntity);
             }
 
         }

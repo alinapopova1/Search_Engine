@@ -28,8 +28,8 @@ public class ForkJoinPoolCrawlingPages {
     public static void crawlingPages(List<SiteEntity> sitesList, SiteRepositories siteRepositories, PageRepositories pageRepositories, AtomicBoolean statusIndexingProcess, ConnectionSettings connectionSettings, LemmaRepositories lemmaRepositories, IndexRepositories indexRepositories) throws InterruptedException {
         log.info("crawlingPages-> Start method crawling pages");
         List<Thread> indexingThreadUrlList = new ArrayList<>();
-        for (SiteEntity site: sitesList){
-            Runnable indexingSite = ()-> {
+        for (SiteEntity site : sitesList) {
+            Runnable indexingSite = () -> {
                 indexingSite(siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, site, lemmaRepositories, indexRepositories);
 
             };
@@ -38,7 +38,7 @@ public class ForkJoinPoolCrawlingPages {
             thread.start();
 
         }
-        for (Thread thread: indexingThreadUrlList){
+        for (Thread thread : indexingThreadUrlList) {
             thread.join();
         }
         statusIndexingProcess.set(false);
@@ -47,12 +47,10 @@ public class ForkJoinPoolCrawlingPages {
     public static void indexingSite(SiteRepositories siteRepositories, PageRepositories pageRepositories, AtomicBoolean statusIndexingProcess, ConnectionSettings connectionSettings, SiteEntity site, LemmaRepositories lemmaRepositories, IndexRepositories indexRepositories) {
         ConcurrentHashMap<String, String> visitedPages = new ConcurrentHashMap<>();
         LinkTree linkTree = new LinkTree(site.getUrl());
-//        LinkTreeNew linkTreeNew = new LinkTreeNew(site.getUrl());
         try {
             log.info("crawlingPages-> Start process crawling pages");
             new ForkJoinPool().invoke(new TreeRecursive(site, linkTree, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories));
-//            new ForkJoinPool().invoke(new TreeRecursiveNew(site, linkTreeNew, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories));
-        } catch (Exception e){
+        } catch (Exception e) {
             log.warn("crawlingPages-> Exception " + e);
             e.printStackTrace();
 
@@ -63,27 +61,17 @@ public class ForkJoinPoolCrawlingPages {
             return;
         }
 
-        if (!statusIndexingProcess.get()){
+        if (!statusIndexingProcess.get()) {
             log.warn("crawlingPages-> Indexing stopped by user, site:" + site.getName());
-//            statusIndexingProcess.set(false);
             site.setStatus(StatusSite.FAILED.name());
             site.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             site.setLastError("Indexing stopped by user");
             siteRepositories.save(site);
         } else {
             log.info("crawlingPages-> Indexing successful site:" + site.getName());
-//            site.setStatus(StatusSite.INDEXED.name());
             site.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             site.setStatus(StatusSite.INDEXED.name());
-//            siteRepositories.save(site);
             siteRepositories.save(site);
-//                    List<PageEntity> pageEntities = new ArrayList<>();
-//                    for (String link: linkTree.getAllChildrenLink()){
-//                        PageEntity pageEntity = new PageEntity();
-//                        pageEntity.setPath();
-//                        pageEntities.add(pageEntity);
-//                    }
-//                    pageRepositories.saveAll(pageEntities);
         }
     }
 }

@@ -31,9 +31,9 @@ public class SearchServiceImpl implements SearchService {
         LemmaFinder lemmaFinder = LemmaFinder.getRusInstance();
         List<LemmaEntity> allLemmas = getAllLemmaByQuery(query, siteEntities, lemmaFinder);
 
-        allLemmas.removeIf(lemma -> {
-            return lemma.getFrequency() > 100;
-        });
+//        allLemmas.removeIf(lemma -> {
+//            return lemma.getFrequency() > 100;
+//        });
 
 
         SearchResponse searchResponse = new SearchResponse();
@@ -46,12 +46,12 @@ public class SearchServiceImpl implements SearchService {
         List<IndexEntity> indexEntities = new ArrayList<>();
         List<Integer> pageIdsToSave = new ArrayList<>();
         for (LemmaEntity lemmaEntity : sortedLemmas) {
-            if (lemmaEntity == sortedLemmas.get(0)){
+            if (lemmaEntity == sortedLemmas.get(0)) {
                 indexEntities = indexRepositories.findByLemmaId(sortedLemmas.get(0).getId());
                 pageIdsToSave.addAll(getPageIdsFromIndex(indexEntities));
             } else {
-            indexEntities = indexRepositories.findByPageIdsLemmaId(pageIdsToSave, lemmaEntity.getId());
-            pageIdsToSave.addAll(getPageIdsFromIndex(indexEntities));
+                indexEntities = indexRepositories.findByPageIdsLemmaId(pageIdsToSave, lemmaEntity.getId());
+                pageIdsToSave.addAll(getPageIdsFromIndex(indexEntities));
             }
 
             if (indexEntities.isEmpty() || pageIdsToSave.isEmpty()) {
@@ -84,7 +84,7 @@ public class SearchServiceImpl implements SearchService {
 
     private static List<SearchData> generateResultSearchDates(HashMap<PageEntity, Float> relevantPages, List<SiteEntity> siteEntities, LemmaFinder lemmaFinder, List<LemmaEntity> sortedLemmas) {
         List<SearchData> resultSearchDates = new ArrayList<>();
-        SearchData searchData = new SearchData();
+
         for (PageEntity pageEntity : relevantPages.keySet()) {
             Document document = Jsoup.parse(pageEntity.getContent());
 
@@ -94,7 +94,8 @@ public class SearchServiceImpl implements SearchService {
                     searchSite = siteEntity;
                 }
             }
-            for (StringBuilder snippet: getSnippets(document, lemmaFinder, sortedLemmas)){
+            for (StringBuilder snippet : getSnippets(document, lemmaFinder, sortedLemmas)) {
+                SearchData searchData = new SearchData();
                 searchData.setUri(pageEntity.getPath());
                 searchData.setSite(searchSite.getUrl());
                 searchData.setTitle(document.title());
@@ -108,22 +109,22 @@ public class SearchServiceImpl implements SearchService {
         return resultSearchDates;
     }
 
-    private static List<StringBuilder> getSnippets(Document document, LemmaFinder lemmaFinder, List<LemmaEntity> sortedLemmas){
+    private static List<StringBuilder> getSnippets(Document document, LemmaFinder lemmaFinder, List<LemmaEntity> sortedLemmas) {
         List<StringBuilder> result = new ArrayList<>();
         List<String> nameLemmas = new ArrayList<>(sortedLemmas.stream().map(LemmaEntity::getLemma).toList());
         List<String> sentences = document.body().getElementsMatchingOwnText("\\p{IsCyrillic}").stream().map(Element::text).toList();
-        for (String sentence :sentences){
+        for (String sentence : sentences) {
             StringBuilder textFromElement = new StringBuilder(sentence);
-            List<String> words= List.of(sentence.split("[\s:punct]"));
-            int searchWords=0;
-            for (String word: words){
+            List<String> words = List.of(sentence.split("[\s:punct]"));
+            int searchWords = 0;
+            for (String word : words) {
                 String lemmaFromWords = lemmaFinder.getLemmaByWord(word.replaceAll("\\p{Punct}", ""));
-                if (nameLemmas.contains(lemmaFromWords)){
+                if (nameLemmas.contains(lemmaFromWords)) {
                     markWord(textFromElement, word, 0);
                     searchWords++;
                 }
             }
-            if (searchWords!=0){
+            if (searchWords != 0) {
                 result.add(textFromElement);
             }
         }
@@ -136,7 +137,7 @@ public class SearchServiceImpl implements SearchService {
         for (int i = limit * offset; i <= offset * limit + limit; i++) {
             try {
                 result.add(sortedSearchDates.get(i));
-            }catch (IndexOutOfBoundsException exception){
+            } catch (IndexOutOfBoundsException exception) {
                 break;
             }
         }
@@ -187,7 +188,10 @@ public class SearchServiceImpl implements SearchService {
         List<LemmaEntity> allLemmas = new ArrayList<>();
         for (String lemma : lemmaSet) {
             for (SiteEntity siteEntity : siteEntities) {
-                allLemmas.add(lemmaRepositories.findBySiteIdAndLemma(siteEntity.getId(), lemma));
+                LemmaEntity lemmaEntity = lemmaRepositories.findBySiteIdAndLemma(siteEntity.getId(), lemma);
+                if (lemmaEntity != null) {
+                    allLemmas.add(lemmaEntity);
+                }
             }
         }
 
@@ -210,8 +214,14 @@ public class SearchServiceImpl implements SearchService {
             markWord(textFromElement, word, start + word.length());
             return;
         }
-        int end = start + word.length();
-        textFromElement.insert(start, "<b>");
+        int end = textFromElement.indexOf(word) + word.length();
+        if (start>=0) {
+            textFromElement.insert(start, "<b>");
+        }else {
+            textFromElement.insert(0, "<b>");
+        }
+
+
         if (end == -1) {
             textFromElement.insert(textFromElement.length(), "</b>");
         } else textFromElement.insert(end + 3, "</b>");

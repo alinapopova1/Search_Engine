@@ -22,4 +22,13 @@ public class SitesList {
         }
         return urls;
     }
+
+    public Site getSiteByUrl(String url){
+        for (Site site: getSites()){
+            if (site.getUrl().equals(url)){
+                return site;
+            }
+        }
+        return null;
+    }
 }
