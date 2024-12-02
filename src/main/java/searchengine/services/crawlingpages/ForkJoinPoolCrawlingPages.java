@@ -31,8 +31,7 @@ public class ForkJoinPoolCrawlingPages {
         for (SiteEntity site: sitesList){
             Runnable indexingSite = ()-> {
                 indexingSite(siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, site, lemmaRepositories, indexRepositories);
-                site.setStatus(StatusSite.INDEXED.name());
-                siteRepositories.save(site);
+
             };
             Thread thread = new Thread(indexingSite);
             indexingThreadUrlList.add(thread);
@@ -42,6 +41,7 @@ public class ForkJoinPoolCrawlingPages {
         for (Thread thread: indexingThreadUrlList){
             thread.join();
         }
+        statusIndexingProcess.set(false);
     }
 
     public static void indexingSite(SiteRepositories siteRepositories, PageRepositories pageRepositories, AtomicBoolean statusIndexingProcess, ConnectionSettings connectionSettings, SiteEntity site, LemmaRepositories lemmaRepositories, IndexRepositories indexRepositories) {
@@ -55,16 +55,17 @@ public class ForkJoinPoolCrawlingPages {
         } catch (Exception e){
             log.warn("crawlingPages-> Exception " + e);
             e.printStackTrace();
-            statusIndexingProcess.set(false);
+
             site.setStatus(StatusSite.FAILED.name());
             site.setLastError(e.getMessage());
             site.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             siteRepositories.save(site);
+            return;
         }
 
         if (!statusIndexingProcess.get()){
             log.warn("crawlingPages-> Indexing stopped by user, site:" + site.getName());
-            statusIndexingProcess.set(false);
+//            statusIndexingProcess.set(false);
             site.setStatus(StatusSite.FAILED.name());
             site.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             site.setLastError("Indexing stopped by user");
@@ -73,6 +74,8 @@ public class ForkJoinPoolCrawlingPages {
             log.info("crawlingPages-> Indexing successful site:" + site.getName());
 //            site.setStatus(StatusSite.INDEXED.name());
             site.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+            site.setStatus(StatusSite.INDEXED.name());
+//            siteRepositories.save(site);
             siteRepositories.save(site);
 //                    List<PageEntity> pageEntities = new ArrayList<>();
 //                    for (String link: linkTree.getAllChildrenLink()){

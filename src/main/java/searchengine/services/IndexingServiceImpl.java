@@ -68,7 +68,7 @@ public class IndexingServiceImpl implements IndexingService {
             indexingResponse.setResult(false);
             indexingResponse.setError("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
             return indexingResponse;
-        } else if (siteEntity.getStatus().equals(StatusSite.INDEXED.name())) {
+        } else if (siteEntity.getStatus().equals(StatusSite.INDEXING.name())) {
             indexingResponse.setResult(false);
             indexingResponse.setError("Хост данной страницы в данный момент индексируется");
             return indexingResponse;
@@ -78,7 +78,8 @@ public class IndexingServiceImpl implements IndexingService {
 //        PageEntity pageEntity = new PageEntity();
 //        pageEntity.setPath(url);
 //        pageEntity.setSite(siteEntity);
-        ForkJoinPoolCrawlingPages.indexingSite(siteRepositories, pageRepositories, new AtomicBoolean(true), connectionSettings, siteEntity, lemmaRepositories, indexRepositories);
+        statusIndexingProcess.set(true);
+        ForkJoinPoolCrawlingPages.indexingSite(siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, siteEntity, lemmaRepositories, indexRepositories);
 //        LemmaFinder.lemmaFinder(url, connectionSettings, pageEntity);
 
         indexingResponse.setResult(true);

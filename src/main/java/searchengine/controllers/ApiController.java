@@ -39,23 +39,18 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity<IndexingResponse> startIndexing() {
+        IndexingResponse indexingResponse = new IndexingResponse();
         if (statusIndexingProcess.get()) {
-            IndexingResponse indexingResponse = new IndexingResponse();
             indexingResponse.setResult(false);
             indexingResponse.setError("Индексация уже запущена");
             return ResponseEntity.status(HttpStatus.CONFLICT).body(indexingResponse);
         }
-        try {
-            return ResponseEntity.ok(executorService.submit(() -> {
-                statusIndexingProcess.set(true);
-                return indexingService.startIndexing(statusIndexingProcess);
-            }).get());
-        } catch (ExecutionException | InterruptedException exception) {
-            IndexingResponse response = new IndexingResponse();
-            response.setResult(false);
-            response.setError("Error: " + exception);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
+        executorService.submit(() -> {
+            statusIndexingProcess.set(true);
+            indexingService.startIndexing(statusIndexingProcess);
+        });
+        indexingResponse.setResult(true);
+        return ResponseEntity.status(HttpStatus.OK).body(indexingResponse);
     }
 
     @GetMapping("/stopIndexing")

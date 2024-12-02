@@ -56,13 +56,13 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
         log.info("TreeRecursive.compute -> start");
         if (!statusIndexingProcess.get()) {
             log.warn("TreeRecursive.compute -> Indexing stopped by user: " + linkTree.getUrl());
-            return linkTree;
+            throw new RuntimeException("Indexing stopped by user");
         } else if (visitedPages.get(linkTree.getUrl()) != null) {
             log.info("TreeRecursive.compute -> Already visited url: " + linkTree.getUrl());
             return linkTree;
         }
         PageEntity pageEntity = new PageEntity();
-        pageEntity.setPath(linkTree.getUrl());
+        pageEntity.setPath(linkTree.getUrl().substring(linkTree.getUrl().indexOf(".ru")+3));
         pageEntity.setSite(site);
 
 //        visitLinks.add(linkTree.getUrl());
@@ -82,25 +82,25 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
             throw new RuntimeException("Indexing stopped by user");
         }
 
-        if (!pageEntity.getPath().equals(pageEntity.getSite().getUrl())) {
+//        if (!pageEntity.getPath().equals(pageEntity.getSite().getUrl())) {
             try {
                 pageEntity = pageRepositories.save(pageEntity);
                 saveLemmaAndIndexEntity(pageEntity);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 log.error("Exception " +e);
                 e.printStackTrace();
             }
             site.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             siteRepositories.save(site);
-        }
+//        }
 
         List<TreeRecursive> newTask = new ArrayList<>();
         for (LinkTree l : linkTree.getLinkChildren()) {
-            if (!visitedPages.contains(l.getUrl()) && !visitedPages.containsKey(l.getUrl())) {
+//            if (!visitedPages.contains(l.getUrl()) && !visitedPages.containsKey(l.getUrl())) {
                 TreeRecursive rec = new TreeRecursive(site, l, visitedPages, siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories);
                 rec.fork();
                 newTask.add(rec);
-            }
+//            }
         }
         for (TreeRecursive task : newTask) {
             task.join();
