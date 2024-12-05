@@ -16,11 +16,16 @@ import searchengine.repositories.LemmaRepositories;
 import searchengine.repositories.PageRepositories;
 import searchengine.repositories.SiteRepositories;
 import searchengine.services.crawlingpages.ForkJoinPoolCrawlingPages;
+import searchengine.services.crawlingpages.LinkTree;
+import searchengine.services.crawlingpages.TreeRecursive;
 
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
@@ -35,6 +40,7 @@ public class IndexingServiceImpl implements IndexingService {
     private final SiteRepositories siteRepositories;
     private final LemmaRepositories lemmaRepositories;
     private final IndexRepositories indexRepositories;
+    private final PageIndexerService pageIndexerService;
     private AtomicBoolean statusIndexingProcess;
 
     @Override
@@ -44,7 +50,7 @@ public class IndexingServiceImpl implements IndexingService {
         IndexingResponse response = new IndexingResponse();
         try {
             deleteAllRecord();
-            ForkJoinPoolCrawlingPages.crawlingPages(addNewSiteInDb(), siteRepositories, pageRepositories, this.statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories);
+            ForkJoinPoolCrawlingPages.crawlingPages(addNewSiteInDb(), siteRepositories, pageRepositories, this.statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories, pageIndexerService);
             response.setResult(this.statusIndexingProcess.get());
         } catch (Exception e) {
             this.statusIndexingProcess.set(false);
@@ -59,29 +65,50 @@ public class IndexingServiceImpl implements IndexingService {
     @Override
     public IndexingResponse indexPage(String url) {
         String host = url.substring(0, url.lastIndexOf(".ru") + 3);
+        String path = url.replace(host, "");
         if (!host.contains("www")) {
             host = host.replace("https://", "https://www.");
         }
         SiteEntity siteEntity = siteRepositories.findByUrl(host);
         IndexingResponse indexingResponse = new IndexingResponse();
-        if (siteEntity == null) {
+
+        if (!sitesList.getUrls().contains(host)) {
             indexingResponse.setResult(false);
             indexingResponse.setError("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
             return indexingResponse;
-        } else if (siteEntity.getStatus().equals(StatusSite.INDEXING.name())) {
+        } else if (siteEntity != null && siteEntity.getStatus().equals(StatusSite.INDEXING.name())) {
             indexingResponse.setResult(false);
             indexingResponse.setError("Хост данной страницы в данный момент индексируется");
             return indexingResponse;
         }
 
-        deletePage(siteEntity.getId(), url);
-//        PageEntity pageEntity = new PageEntity();
-//        pageEntity.setPath(url);
-//        pageEntity.setSite(siteEntity);
-        statusIndexingProcess.set(true);
-        ForkJoinPoolCrawlingPages.indexingSite(siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, siteEntity, lemmaRepositories, indexRepositories);
-//        LemmaFinder.lemmaFinder(url, connectionSettings, pageEntity);
+        if (siteEntity != null) {
+            siteEntity.setStatus(StatusSite.INDEXING.name());
+            siteEntity.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
 
+        } else {
+            Site site = sitesList.getSiteByUrl(host);
+            siteEntity = new SiteEntity();
+            siteEntity.setStatus(StatusSite.INDEXING.name());
+            siteEntity.setUrl(site.getUrl());
+            siteEntity.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+            siteEntity.setName(site.getName());
+        }
+        siteRepositories.save(siteEntity);
+
+        statusIndexingProcess = new AtomicBoolean(true);
+//        ForkJoinPoolCrawlingPages.indexingSite(siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, siteEntity, lemmaRepositories, indexRepositories);
+//        LemmaFinder.lemmaFinder(url, connectionSettings, pageEntity);
+        try {
+            TreeRecursive treeRecursive = new TreeRecursive(siteEntity, new LinkTree(url), new ConcurrentHashMap<>(),
+                    siteRepositories, pageRepositories, statusIndexingProcess, connectionSettings, lemmaRepositories, indexRepositories, pageIndexerService);
+            treeRecursive.indexPage(path);
+        } catch (Exception e) {
+            statusIndexingProcess.set(false);
+            siteEntity.setStatus(StatusSite.FAILED.name());
+            siteEntity.setLastError(e.getMessage());
+            siteRepositories.save(siteEntity);
+        }
         indexingResponse.setResult(true);
         return indexingResponse;
     }
@@ -105,36 +132,25 @@ public class IndexingServiceImpl implements IndexingService {
 
         List<SiteEntity> siteEntities = siteRepositories.findByUrls(sitesList.getUrls());
         for (SiteEntity siteEntity : siteEntities) {
-            List<PageEntity> pageEntities = pageRepositories.findAllBySiteId(siteEntity.getId());
-            List<LemmaEntity> lemmaEntities = lemmaRepositories.findBySiteId(siteEntity.getId());
-            for (LemmaEntity lemmaEntity : lemmaEntities) {
-                List<IndexEntity> indexEntities = indexRepositories.findByLemmaId(lemmaEntity.getId());
-                for (IndexEntity indexEntity : indexEntities) {
-                    indexRepositories.deleteById(indexEntity.getId());
-                }
-                lemmaRepositories.deleteById(lemmaEntity.getId());
-            }
-
-            for (PageEntity pageEntity : pageEntities) {
-                pageRepositories.deleteById(pageEntity.getId());
-            }
-            siteRepositories.deleteById(siteEntity.getId());
+            deleteAllRecordBySiteEntity(siteEntity);
         }
     }
 
-    private void deletePage(int siteId, String path) {
-        PageEntity pageEntity = pageRepositories.findBySiteIdAndPage(siteId, path);
-        if (pageEntity != null) {
-            List<LemmaEntity> lemmaEntities = lemmaRepositories.findBySiteId(siteId);
-            for (LemmaEntity lemmaEntity : lemmaEntities) {
-                IndexEntity indexEntity = indexRepositories.findByPageIdLemmaId(pageEntity.getId(), lemmaEntity.getId());
-                if (indexEntity != null) {
-                    indexRepositories.deleteById(indexEntity.getId());
-                    lemmaEntity.setFrequency(lemmaEntity.getFrequency() - 1);
-                    lemmaRepositories.save(lemmaEntity);
-                }
+    private void deleteAllRecordBySiteEntity(SiteEntity siteEntity) {
+        List<PageEntity> pageEntities = pageRepositories.findAllBySiteId(siteEntity.getId());
+        List<LemmaEntity> lemmaEntities = lemmaRepositories.findBySiteId(siteEntity.getId());
+        for (LemmaEntity lemmaEntity : lemmaEntities) {
+            List<IndexEntity> indexEntities = indexRepositories.findByLemmaId(lemmaEntity.getId());
+            for (IndexEntity indexEntity : indexEntities) {
+                indexRepositories.deleteById(indexEntity.getId());
             }
+            lemmaRepositories.deleteById(lemmaEntity.getId());
+        }
+
+        for (PageEntity pageEntity : pageEntities) {
             pageRepositories.deleteById(pageEntity.getId());
         }
+        siteRepositories.deleteById(siteEntity.getId());
     }
+
 }

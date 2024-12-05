@@ -1,6 +1,7 @@
 package searchengine.repositories;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -25,7 +26,12 @@ public interface IndexRepositories extends JpaRepository<IndexEntity, Integer> {
     @Query(value = "select * from index_page where page_id in :page_ids", nativeQuery = true)
     List<IndexEntity> findByPageIds(@Param("page_ids") List<Integer> pageIds);
 
+    @Modifying
+    @Transactional
     @Query(value = "delete from index_page where page_id = :page_id", nativeQuery = true)
-    void deleteByPageId(@Param("page_id") Integer pageId);
+    void deleteByPageId(@Param("page_id") int pageId);
+
+    @Query(value = "select * from index_page where page_id = :page_id", nativeQuery = true)
+    List<IndexEntity> findAllByPageId(@Param("page_id") int pageId);
 
 }

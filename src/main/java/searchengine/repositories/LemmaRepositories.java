@@ -13,6 +13,8 @@ import searchengine.model.SiteEntity;
 import java.util.List;
 @Transactional
 public interface LemmaRepositories extends JpaRepository<LemmaEntity, Integer> {
+    @Query(value = "select * from lemma t where t.lemma = :lemma and t.site_id = :siteId for update", nativeQuery = true)
+    LemmaEntity lemmaExist(String lemma, Integer siteId);
 
     @Query(value = "select * from lemma where site_id = :site_id", nativeQuery = true)
     List<LemmaEntity> findBySiteId(@Param("site_id") int siteId);

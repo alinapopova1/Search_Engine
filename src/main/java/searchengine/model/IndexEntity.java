@@ -13,7 +13,8 @@ import lombok.Setter;
 public class IndexEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    @Column(name = "id", nullable = false)
+    private Integer id;
     @ManyToOne(cascade = CascadeType.MERGE, fetch = FetchType.EAGER)
     @JoinColumn(name = "page_id", nullable = false)
     private PageEntity page;
@@ -21,7 +22,7 @@ public class IndexEntity {
     @JoinColumn(name = "lemma_id", nullable = false)
     private LemmaEntity lemma;
     @Column(name = "lemma_rank", nullable = false)
-    private float rank;
+    private int rank;
 
     public Integer getPageId(){
         return page.getId();

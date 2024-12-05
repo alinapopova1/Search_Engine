@@ -31,8 +31,7 @@ public class Parsing {
         ConcurrentSkipListSet<String> links = new ConcurrentSkipListSet<>();
         try {
             sleep(500);
-            Document document = Jsoup.connect(url).userAgent(connectionSettings.getUserAgent()).referrer(connectionSettings.getReferer())
-                    .timeout(10000).get();
+            Document document = getJsoupDocument(url, connectionSettings);
             Elements elements = document.select("body").select("a");
 
             for (Element element : elements) {
@@ -54,6 +53,11 @@ public class Parsing {
             pageEntity.setContent(e.toString());
         }
         return links;
+    }
+
+    public static Document getJsoupDocument(String url, ConnectionSettings connectionSettings) throws IOException {
+        return Jsoup.connect(url).userAgent(connectionSettings.getUserAgent()).referrer(connectionSettings.getReferer())
+                .timeout(10000).get();
     }
 
     public static int getStatusCode(Exception exception) {
