@@ -1,11 +1,14 @@
 package searchengine.services.crawlingpages;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+@Getter
 public class LinkTree {
-    private String url;
+    private final String url;
     CopyOnWriteArrayList<LinkTree> linkChildren  = new CopyOnWriteArrayList<>();
 
     public LinkTree(String url) {
@@ -13,22 +16,8 @@ public class LinkTree {
         linkChildren = new CopyOnWriteArrayList<>();
     }
 
-    public String getUrl() {
-        return url;
-    }
-
     public void addLink(LinkTree link) {
         linkChildren.add(link);
-    }
-
-    public CopyOnWriteArrayList<LinkTree> getLinkChildren() {
-        return linkChildren;
-    }
-
-    public List<String> getAllChildrenLink(){
-        List<String> result = new ArrayList<>();
-        this.recursiveCrawling(result);
-        return result;
     }
 
     private void recursiveCrawling(List<String> result){

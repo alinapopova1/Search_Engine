@@ -208,21 +208,6 @@ public class LemmaFinder {
         return true;
     }
 
-//    public static IndexingResponse lemmaFinder(String url, ConnectionSettings connectionSettings, PageEntity pageEntity) {
-//        IndexingResponse indexingResponse = new IndexingResponse();
-//        try {
-//            Document document = Jsoup.connect(url).userAgent(connectionSettings.getUserAgent()).referrer(connectionSettings.getReferer())
-//                    .timeout(10000).get();
-//            Elements elements = document.select("body");
-//        } catch (IOException e) {
-//            indexingResponse.setResult(false);
-//            indexingResponse.setError("Exception " + e + " statusCode " + getStatusCode(e));
-//            return indexingResponse;
-//        }
-//
-//        return indexingResponse;
-//    }
-
     public String getLemmaByWord(String word){
         String wordLowerCase = word.toLowerCase();
         if (checkMatchWord(wordLowerCase)) return "";
