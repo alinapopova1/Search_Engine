@@ -20,10 +20,8 @@ public class PageEntity {
     private SiteEntity site;
     @Column(columnDefinition = "VARCHAR(255)", nullable = false, unique = true)
     private String path;
-//    @Nonnull
     @Column(nullable = false)
     private int code;
-//    @Nonnull
     @Column(columnDefinition = "MEDIUMTEXT", nullable = false)
     private String content;
 }

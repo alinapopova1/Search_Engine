@@ -1,11 +1,11 @@
-package searchengine.services;
+package searchengine.services.interfaces;
 
 import searchengine.dto.indexing.IndexingResponse;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public interface IndexingService {
-    IndexingResponse startIndexing(AtomicBoolean statusIndexingProcess);
+    void startIndexing(AtomicBoolean statusIndexingProcess);
 
     IndexingResponse indexPage(String url);
 }

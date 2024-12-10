@@ -15,6 +15,9 @@ import java.util.List;
 public class SitesList {
     private List<Site> sites;
 
+    /**
+     * @return список всех урлов из конфига
+     */
     public List<String> getUrls(){
         List<String> urls = new ArrayList<>();
         for (Site site : sites){
@@ -23,6 +26,11 @@ public class SitesList {
         return urls;
     }
 
+    /**
+     *
+     * @param url сайт
+     * @return DTO сайта по искомому урлу
+     */
     public Site getSiteByUrl(String url){
         for (Site site: getSites()){
             if (site.getUrl().equals(url)){

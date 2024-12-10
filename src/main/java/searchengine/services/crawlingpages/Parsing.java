@@ -13,13 +13,17 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import static java.lang.Thread.sleep;
 
 public class Parsing {
-    private static ConcurrentSkipListSet<String> links = new ConcurrentSkipListSet<>();
 
     public static boolean AllowedUrl(String link) {
         String regex = "http[s]?://[^#,\\s]*\\.?.*?\\.ru[^#,\\s]*";
         return link.matches(regex);
     }
 
+    /**
+     *
+     * @param link вложенная страница
+     * @return является ли она урлом
+     */
     static boolean allowedExtension(String link) {
         link.toLowerCase();
         return link.contains(".jpg") || link.contains(".pdf") || link.contains(".zip")
@@ -27,6 +31,13 @@ public class Parsing {
                 || link.contains(".sql");
     }
 
+    /**
+     * Выполняет запрос к странице, получает список урлов, сохраняет результат запроса в PageEntity
+     * @param url урл по которому выполняем запрос
+     * @param pageEntity объект страницы в БД, куда сохраняем результат выполнения запроса
+     * @param connectionSettings параметры соеденения из конфига
+     * @return список полученных урлов со страницы
+     */
     public static ConcurrentSkipListSet<String> getLinks(String url, PageEntity pageEntity, ConnectionSettings connectionSettings) {
         ConcurrentSkipListSet<String> links = new ConcurrentSkipListSet<>();
         try {
@@ -60,6 +71,11 @@ public class Parsing {
                 .timeout(10000).get();
     }
 
+    /**
+     * Конвертирует полученный ответ в понятый http status code
+     * @param exception
+     * @return http status code
+     */
     public static int getStatusCode(Exception exception) {
         String message = exception.toString();
         int statusCode;

@@ -1,6 +1,5 @@
-package searchengine.services;
+package searchengine.services.interfaces;
 
-import org.springframework.web.bind.annotation.RequestParam;
 import searchengine.dto.search.SearchResponse;
 
 import java.io.IOException;
