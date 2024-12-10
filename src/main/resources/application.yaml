@@ -8,10 +8,19 @@ indexing-settings:
 #      name: Лента.ру
     #    - url: https://www.skillbox.ru
 #      name: Skillbox
-     - url: https://www.sendel.ru
-       name: sendel.Ru
+    #     - url: https://www.arendaopalubki54.ru
+    #       name: arenda.Ru
+    #   - url: https://www.sendel.ru
+    #      name: sendel.Ru
     #   - url: https://www.playback.ru
     #     name: PlayBack.Ru
+    # - url: https://www.naslediensk.ru  - большой сайт
+    #   name: naslediensk.ru
+     - url: https://nshkola.ru
+       name: union-sch
+     - url: https://rost21vek.ru
+       name: rost21vek
+
 
 
 spring:

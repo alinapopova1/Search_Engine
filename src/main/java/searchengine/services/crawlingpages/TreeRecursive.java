@@ -116,7 +116,8 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
         LemmaFinder lemmaFinderRus = LemmaFinder.getRusInstance();
 //        LemmaFinder lemmaFinderEng = LemmaFinder.getEngInstance();
         if (pageEntity.getCode() == 200) {
-            Map<String, Integer> lemmaCollect = lemmaFinderRus.collectLemmas(pageEntity.getContent());
+            Map<String, Integer> lemmaCollect = lemmaFinderRus.collectRusLemmas(pageEntity.getContent());
+//            lemmaCollect.putAll(lemmaFinderEng.collectEngLemmas(pageEntity.getContent()));
             Set<String> lemmas = lemmaCollect.keySet();
 
 

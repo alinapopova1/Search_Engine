@@ -28,7 +28,9 @@ public class PageIndexerServiceImpl implements PageIndexerService{
     public void indexHtml(String html, PageEntity indexingPage) throws IOException {
         long start = System.currentTimeMillis();
         LemmaFinder lemmaFinder = LemmaFinder.getRusInstance();
-        Map<String, Integer> lemmas = lemmaFinder.collectLemmas(html);
+//        LemmaFinder lemmaFinderEng = LemmaFinder.getEngInstance();
+        Map<String, Integer> lemmas = lemmaFinder.collectRusLemmas(html);
+//        lemmas.putAll(lemmaFinderEng.collectEngLemmas(html));
         lemmas.entrySet().parallelStream().forEach(entry -> saveLemma(entry.getKey(), entry.getValue(), indexingPage));
         log.debug("Индексация страницы " + (System.currentTimeMillis() - start) + " lemmas:" + lemmas.size());
     }
@@ -38,7 +40,9 @@ public class PageIndexerServiceImpl implements PageIndexerService{
         long start = System.currentTimeMillis();
 
         LemmaFinder lemmaFinder = LemmaFinder.getRusInstance();
-        Map<String, Integer> lemmas = lemmaFinder.collectLemmas(html);
+//        LemmaFinder lemmaFinderEng = LemmaFinder.getEngInstance();
+        Map<String, Integer> lemmas = lemmaFinder.collectRusLemmas(html);
+//        lemmas.putAll(lemmaFinderEng.collectEngLemmas(html));
         //уменьшение frequency у лемм которые присутствуют на обновляемой странице
         refreshLemma(refreshPage);
         //удаление индекса
