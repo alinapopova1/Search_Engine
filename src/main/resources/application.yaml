@@ -1,10 +1,30 @@
 # example values
+server:
+  port: 8080
 
 indexing-settings:
   sites:
-    - url: https://www.lenta.ru
-      name: Лента.ру
-    - url: https://www.skillbox.ru
-      name: Skillbox
-    - url: https://www.playback.ru
-      name: PlayBack.Ru
+     - url: https://nshkola.ru
+       name: union-sch
+     - url: https://rost21vek.ru
+       name: rost21vek
+
+
+
+spring:
+  datasource:
+    username: root
+    password: Krismas45
+    url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowePublicKeyRetrieval=true
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    generate-ddl: true
+
+connection-settings:
+  userAgent: Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6
+  referer: http://www.google.com
