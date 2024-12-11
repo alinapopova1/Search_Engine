@@ -30,9 +30,9 @@ public class PageIndexerServiceImpl implements PageIndexerService {
         log.info("refreshIndex-> Start refresh index page:{}", refreshPage.getPath());
 
         LemmaFinder lemmaFinder = LemmaFinder.getRusInstance();
-//        LemmaFinder lemmaFinderEng = LemmaFinder.getEngInstance();
+        LemmaFinder lemmaFinderEng = LemmaFinder.getEngInstance();
         Map<String, Integer> lemmas = lemmaFinder.collectRusLemmas(html);
-//        lemmas.putAll(lemmaFinderEng.collectEngLemmas(html));
+        lemmas.putAll(lemmaFinderEng.collectEngLemmas(html));
         refreshLemma(refreshPage);
         indexSearchRepository.deleteByPageId(refreshPage.getId());
         lemmas.entrySet().parallelStream().forEach(entry -> saveLemma(entry.getKey(), entry.getValue(), refreshPage));

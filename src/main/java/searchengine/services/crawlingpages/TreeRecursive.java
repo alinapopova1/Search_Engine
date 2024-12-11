@@ -1,7 +1,9 @@
 package searchengine.services.crawlingpages;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.safety.Safelist;
 import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.ConnectionSettings;
 import searchengine.model.*;
@@ -121,10 +123,11 @@ public class TreeRecursive extends RecursiveTask<LinkTree> {
      */
     private void saveLemmaAndIndexEntity(PageEntity pageEntity) throws IOException {
         LemmaFinder lemmaFinderRus = LemmaFinder.getRusInstance();
-//        LemmaFinder lemmaFinderEng = LemmaFinder.getEngInstance();
+        LemmaFinder lemmaFinderEng = LemmaFinder.getEngInstance();
         if (pageEntity.getCode() == 200) {
-            Map<String, Integer> lemmaCollect = lemmaFinderRus.collectRusLemmas(pageEntity.getContent());
-//            lemmaCollect.putAll(lemmaFinderEng.collectEngLemmas(pageEntity.getContent()));
+            String text =Jsoup.clean(pageEntity.getContent(), Safelist.none());
+            Map<String, Integer> lemmaCollect = lemmaFinderRus.collectRusLemmas(text);
+            lemmaCollect.putAll(lemmaFinderEng.collectEngLemmas(text));
             Set<String> lemmas = lemmaCollect.keySet();
 
             for (String lemma : lemmas) {

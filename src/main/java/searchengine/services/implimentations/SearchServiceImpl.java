@@ -57,11 +57,15 @@ public class SearchServiceImpl implements SearchService {
         List<PageEntity> pageEntities = pageRepositories.findByPageIds(pageIdsToSave);
         HashMap<PageEntity, Float> absRelevantPages = calculateAllAbsRelevant(pageEntities, indexEntities);
         HashMap<PageEntity, Float> relevantPages = calculateAllRelevant(absRelevantPages);
-        List<SearchData> resultSearchDates = generateResultSearchDates(relevantPages, siteEntities, lemmaFinder, sortedLemmas);
+        List<SearchData> resultSearchDates = generateResultSearchDates(relevantPages, siteEntities, lemmaFinder, lemmaFinderEng, sortedLemmas);
 
-        searchResponse.setResult(true);
-        searchResponse.setCount(resultSearchDates.size());
-        searchResponse.setData(getSortedSearchDataWithOffset(resultSearchDates, offset, limit));
+        if (!resultSearchDates.isEmpty()) {
+            searchResponse.setResult(true);
+            searchResponse.setCount(resultSearchDates.size());
+            searchResponse.setData(getSortedSearchDataWithOffset(resultSearchDates, offset, limit));
+        } else {
+            getSearchResponseEmpty(searchResponse);
+        }
 
         return searchResponse;
     }
@@ -95,8 +99,8 @@ public class SearchServiceImpl implements SearchService {
      * @return
      */
     private static SearchResponse getSearchResponseEmpty(SearchResponse searchResponse) {
-        searchResponse.setResult(true);
-        searchResponse.setCount(0);
+        searchResponse.setResult(false);
+        searchResponse.setError("Не найдено ни одной страницы");
         return searchResponse;
     }
 
@@ -108,7 +112,7 @@ public class SearchServiceImpl implements SearchService {
      * @return список с результатом поиска по страницам
      */
     private static List<SearchData> generateResultSearchDates(HashMap<PageEntity, Float> relevantPages, List<SiteEntity> siteEntities,
-                                                              LemmaFinder lemmaFinder, List<LemmaEntity> sortedLemmas) {
+                                                              LemmaFinder lemmaFinder, LemmaFinder lemmaFinderEng, List<LemmaEntity> sortedLemmas) {
         log.info("generateResultSearchDates-> start method");
         List<SearchData> resultSearchDates = new ArrayList<>();
 
@@ -121,14 +125,17 @@ public class SearchServiceImpl implements SearchService {
                     searchSite = siteEntity;
                 }
             }
-            SearchData searchData = new SearchData();
-            searchData.setUri(pageEntity.getPath());
-            searchData.setSite(searchSite.getUrl());
-            searchData.setTitle(document.title());
-            searchData.setSiteName(searchSite.getName());
-            searchData.setSnippet(getSnippet(document.text(), lemmaFinder, sortedLemmas).toString());
-            searchData.setRelevance(relevantPages.get(pageEntity));
-            resultSearchDates.add(searchData);
+            String snippet = getSnippet(document.text(), lemmaFinder, lemmaFinderEng, sortedLemmas).toString();
+            if (!snippet.isEmpty()) {
+                SearchData searchData = new SearchData();
+                searchData.setUri(pageEntity.getPath());
+                searchData.setSite(searchSite.getUrl());
+                searchData.setTitle(document.title());
+                searchData.setSiteName(searchSite.getName());
+                searchData.setSnippet(snippet);
+                searchData.setRelevance(relevantPages.get(pageEntity));
+                resultSearchDates.add(searchData);
+            }
         }
 
         return resultSearchDates;
@@ -142,7 +149,7 @@ public class SearchServiceImpl implements SearchService {
      * @param sortedLemmas список отсортированных лемм
      * @return сниппет по странице, которая была найдена в результате поиска
      */
-    private static StringBuilder getSnippet(String text, LemmaFinder lemmaFinder, List<LemmaEntity> sortedLemmas) {
+    private static StringBuilder getSnippet(String text, LemmaFinder lemmaFinder, LemmaFinder lemmaFinderEng, List<LemmaEntity> sortedLemmas) {
         log.info("getSnippet-> start method");
         text = Jsoup.clean(text, Safelist.none());
         StringBuilder textWithLemmas = new StringBuilder();
@@ -157,36 +164,32 @@ public class SearchServiceImpl implements SearchService {
                 word.append(symbol);
             } else {
                 try {
-                    lemma = getLemmaByWord(word, lemmaFinder);
+                    lemma = getLemmaByWord(word, lemmaFinder, lemmaFinderEng);
 
                     if (containsLemmaInListLemmaEntities(sortedLemmas, lemma)) {
                         boldingLemmaInText(textWithLemmas, word, positionsFirstHighlightedWords, addedLemmas, lemma);
                     }
                     word = new StringBuilder();
                 } catch (WrongCharaterException wce) {
-//                    try {
-//                        lemma = luceneMorphEng.getNormalForms(lemma).get(0);
-//                        if (lemmas.contains(lemma)) {
-//                            insertInPositionsWords(textWithLemmas, word, positionsFirstHighlightedWords, addedLemmas, lemma);
-//                        }
                     word = new StringBuilder();
-//                    } catch (WrongCharaterException w) {
-//                        word = new StringBuilder();
-//                    }
                 }
             }
         }
         return createSnippet(positionsFirstHighlightedWords, textWithLemmas);
     }
 
-    private static String getLemmaByWord(StringBuilder word, LemmaFinder lemmaFinder) {
+    private static String getLemmaByWord(StringBuilder word, LemmaFinder lemmaFinder, LemmaFinder lemmaFinderEng) {
         String wordLowerCase;
         if (!word.isEmpty()) {
             wordLowerCase = word.toString().toLowerCase();
         } else {
             wordLowerCase = ".";
         }
-        return lemmaFinder.getLemmaByWord(wordLowerCase);
+        String lemma = lemmaFinder.getLemmaByWord(wordLowerCase);
+        if (Objects.equals(lemma, "")){
+            lemma = lemmaFinderEng.getLemmaByWord(wordLowerCase);
+        }
+        return lemma;
     }
 
     /**
@@ -217,7 +220,12 @@ public class SearchServiceImpl implements SearchService {
         int startPosition;
         int endPosition;
         int endIndexHighlightedWord;
-        int countSymbolsFromLemma = Math.max(160 / positionsFirstHighlightedWords.size(), 25);
+        int countSymbolsFromLemma;
+        try {
+            countSymbolsFromLemma = Math.max(160 / positionsFirstHighlightedWords.size(), 25);
+        } catch (ArithmeticException e){
+            return new StringBuilder();
+        }
 
         for (Map.Entry<Integer, String> positionHighlightedWord : positionsFirstHighlightedWords.entrySet()) {
             endIndexHighlightedWord =positionHighlightedWord.getKey() + positionHighlightedWord.getValue().length();
@@ -378,7 +386,7 @@ public class SearchServiceImpl implements SearchService {
     private List<LemmaEntity> getAllLemmaByQuery(String query, List<SiteEntity> siteEntities, LemmaFinder lemmaFinder, LemmaFinder lemmaFinderEng) throws IOException {
         log.info("getAllLemmaByQuery-> start method search lemma by query");
         Set<String> lemmaSet = lemmaFinder.getRusLemmaSet(query);
-//        lemmaSet.addAll(lemmaFinderEng.getEngLemmaSet(query));
+        lemmaSet.addAll(lemmaFinderEng.getEngLemmaSet(query));
         List<LemmaEntity> allLemmas = new ArrayList<>();
         for (String lemma : lemmaSet) {
             for (SiteEntity siteEntity : siteEntities) {

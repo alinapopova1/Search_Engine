@@ -227,6 +227,6 @@ public class LemmaFinder {
     }
 
     private boolean checkWordInfo(String wordInfo) {
-        return wordInfo.contains("ПРЕДЛ") || wordInfo.contains("СОЮЗ") || wordInfo.contains("МЕЖД"); //|| wordInfo.contains("MC") || wordInfo.contains("CONJ") || wordInfo.contains("PART");
+        return wordInfo.contains("ПРЕДЛ") || wordInfo.contains("СОЮЗ") || wordInfo.contains("МЕЖД") || wordInfo.contains("MC") || wordInfo.contains("CONJ") || wordInfo.contains("PART");
     }
 }
