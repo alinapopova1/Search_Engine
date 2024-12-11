@@ -1,4 +1,4 @@
-package searchengine.services;
+package searchengine.services.implimentations;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -8,6 +8,11 @@ import searchengine.dto.statistics.DetailedStatisticsItem;
 import searchengine.dto.statistics.StatisticsData;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
+import searchengine.model.SiteEntity;
+import searchengine.repositories.LemmaRepositories;
+import searchengine.repositories.PageRepositories;
+import searchengine.repositories.SiteRepositories;
+import searchengine.services.interfaces.StatisticsService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +21,10 @@ import java.util.Random;
 @Service
 @RequiredArgsConstructor
 public class StatisticsServiceImpl implements StatisticsService {
+
+    private final PageRepositories pageRepositories;
+    private final SiteRepositories siteRepositories;
+    private final LemmaRepositories lemmaRepositories;
 
     private final Random random = new Random();
     private final SitesList sites;
@@ -40,14 +49,14 @@ public class StatisticsServiceImpl implements StatisticsService {
             DetailedStatisticsItem item = new DetailedStatisticsItem();
             item.setName(site.getName());
             item.setUrl(site.getUrl());
-            int pages = random.nextInt(1_000);
-            int lemmas = pages * random.nextInt(1_000);
+            SiteEntity siteEntity =siteRepositories.findByUrl(site.getUrl());
+            int pages = (int) pageRepositories.findAllBySiteId(siteEntity.getId()).stream().count();
+            int lemmas = (int) lemmaRepositories.findBySiteId(siteEntity.getId()).stream().count();
             item.setPages(pages);
             item.setLemmas(lemmas);
-            item.setStatus(statuses[i % 3]);
-            item.setError(errors[i % 3]);
-            item.setStatusTime(System.currentTimeMillis() -
-                    (random.nextInt(10_000)));
+            item.setStatus(siteEntity.getStatus());
+            item.setError(siteEntity.getLastError());
+            item.setStatusTime(siteEntity.getStatusTime());
             total.setPages(total.getPages() + pages);
             total.setLemmas(total.getLemmas() + lemmas);
             detailed.add(item);
